@@ -7,10 +7,13 @@
 
 typedef unsigned int uint;
 
-typedef struct Header {
-    char *key;
-    char *value;
-} Header;
+enum ERROR_CODES {
+    INVALID_FLAG = 1,
+    TOO_FEW_ARGUMENTS,
+    NO_URL_PROVIDED,
+    INVALID_URL,
+    INVALID_METHOD,
+};
 
 enum METHOD {
     GET,
@@ -22,23 +25,7 @@ enum METHOD {
     METHOD_SIZE
 };
 
-enum ERROR_CODES {
-    INVALID_FLAG = 1,
-    TOO_FEW_ARGUMENTS,
-};
-
-enum FLAG {
-    METHOD,
-    HEADER,
-    UNKNOWN,
-    FLAG_SIZE
-};
-
-typedef struct Flag {
-    enum FLAG flag;
-    char *value;
-} Flag;
-
 void remove_spaces(char *str);
+char *method_to_text(enum METHOD m);
 
 #endif

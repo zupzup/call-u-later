@@ -17,7 +17,7 @@ clean:
 	rm -rf *.o *.dSYM call-u-later
 
 memcheck: build 
-	@valgrind $(VFLAGS) ./call-u-later abc --m GET -h 'bla:blub' http://www.bla.com
+	@valgrind $(VFLAGS) ./call-u-later abc --m GET -h 'bla:blub' -h 'yay:yoy' -h 'bla:' -b '{ "key": "value" }' http://www.bla.com.
 	@echo "Memory check passed"
 
 run: build

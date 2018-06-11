@@ -5,15 +5,14 @@
 #include <stdio.h>
 #include <ctype.h>
 
-Options create_options(int argv) {
+Options create_options(int argv, char** argc) {
     Header **headers = (Header **)malloc((argv - 1) * sizeof(Header *));
-    Options opts = { .method = GET, .url = "", .headers = headers, .num_headers = 0 };
+    uint url_length = strlen(argc[argv - 1]);
+    // TODO: parse URL here, for more efficient allocation
+    char *host = (char *)calloc(url_length + 1, sizeof(char));
+    char *path = (char *)calloc(url_length + 1, sizeof(char));
+    Options opts = { .method = GET, .host = host, .path = path, .body = "", .headers = headers, .num_headers = 0 };
     return opts;
-}
-
-bool is_flag(char *arg) {
-    if (arg == NULL || strlen(arg) <= 1) return false;
-    return arg[0] == HYPHEN && ((arg[1] == HYPHEN && isalpha(arg[2])) || isalpha(arg[1])); 
 }
 
 void destroy_options(Options *opts) {
@@ -22,7 +21,14 @@ void destroy_options(Options *opts) {
         free(opts->headers[i]->value);
         free(opts->headers[i]);
     }
+    free(opts->host);
+    free(opts->path);
     free(opts->headers);
+}
+
+bool is_flag(char *arg) {
+    if (arg == NULL || strlen(arg) <= 1) return false;
+    return arg[0] == HYPHEN && ((arg[1] == HYPHEN && isalpha(arg[2])) || isalpha(arg[1])); 
 }
 
 bool validate_flag(Flag *f, char *flag_as_string) {
@@ -42,12 +48,27 @@ bool validate_flag(Flag *f, char *flag_as_string) {
         printf("error: a header needs to be of the format 'key:value', e.g.: 'Authorization: Basic 123' \n");
         return false;
     }
+    if (f->flag == BODY && !f->value) {
+        printf("error: you need to specify a body after -b / --b\n");
+        return false;
+    }
     return true;
+}
+
+enum METHOD str_to_method(char *m) {
+    if (strcmp(m, "GET")) return GET;
+    if (strcmp(m, "POST")) return GET;
+    if (strcmp(m, "PUT")) return PUT;
+    if (strcmp(m, "DELETE")) return DELETE;
+    if (strcmp(m, "OPTIONS")) return OPTIONS;
+    if (strcmp(m, "HEAD")) return HEAD;
+    return -1;
 }
 
 enum FLAG str_to_flag(char *arg) {
     if (strcmp(arg, "-m") == 0 || strcmp(arg, "--m") == 0) return METHOD;
     if (strcmp(arg, "-h") == 0 || strcmp(arg, "--h") == 0) return HEADER;
+    if (strcmp(arg, "-b") == 0 || strcmp(arg, "--b") == 0) return BODY;
     return UNKNOWN;
 }
 
@@ -80,9 +101,35 @@ Header *parse_header(Flag f) {
     return h;
 }
 
+// TODO: more robust parsing
+int parse_url(Options *opts, char *url) {
+    if (!url) return NO_URL_PROVIDED;
+    uint len = strlen(url);
+    uint num_slashes = 0;
+    uint path_index = 0;
+    for (uint i = 0; i < len; i++) {
+        if (url[i] == '/') num_slashes++;
+        if (num_slashes == 3) {
+            path_index = i;
+            break;
+        }
+    }
+    if (num_slashes < 2) return INVALID_URL;
+    if (num_slashes == 2) {
+        memcpy(opts->host, url, len);
+        memcpy(opts->path, "/", 1);
+    } else {
+        memcpy(opts->host, url, path_index);
+        memcpy(opts->path, url + path_index, len - path_index);
+    }
+    return 0;
+}
+
 int parse_options(int argv, char **argc, Options *opts) {
-    opts->method = POST;
-    opts->url = argc[argv - 1];
+    int err = parse_url(opts, argc[argv - 1]);
+    if (err != 0 ) {
+        return err;
+    }
     for (int i = 0; i < argv; i++) {
         if (is_flag(argc[i])) {
             char *value = NULL;
@@ -96,9 +143,17 @@ int parse_options(int argv, char **argc, Options *opts) {
                 Header *h = parse_header(f);
                 opts->headers[opts->num_headers++] = h;
             }
+            if (f.flag == BODY) opts->body = f.value;
+            if (f.flag == METHOD) {
+                enum METHOD m = str_to_method(f.value);
+                if (m >= GET && m < METHOD_SIZE) {
+                    opts->method = m;
+                } else {
+                    return INVALID_METHOD;
+                }
+            }
             printf("%s %s %i %s\n", argc[i], is_flag(argc[i]) ? "flag" : "value", f.flag, f.value);
         }
     }
-    printf("method: %d url: %s num headers: %d key: %s, value %s\n", opts->method, opts->url, opts->num_headers, opts->headers[0]->key, opts->headers[0]->value);
     return 0;
 }
