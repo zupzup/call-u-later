@@ -11,7 +11,8 @@ Options create_options(int argv, char** argc) {
     // TODO: parse URL here, for more efficient allocation
     char *host = (char *)calloc(url_length + 1, sizeof(char));
     char *path = (char *)calloc(url_length + 1, sizeof(char));
-    Options opts = { .method = GET, .host = host, .path = path, .body = "", .headers = headers, .num_headers = 0 };
+    char *port = (char *)calloc(6, sizeof(char));
+    Options opts = { .method = GET, .host = host, .path = path, .body = "", .headers = headers, .num_headers = 0, .port = port, .is_tls = false };
     return opts;
 }
 
@@ -105,22 +106,43 @@ Header *parse_header(Flag f) {
 int parse_url(Options *opts, char *url) {
     if (!url) return NO_URL_PROVIDED;
     uint len = strlen(url);
+    if (len < 8) return INVALID_URL;
     uint num_slashes = 0;
+    uint num_colons = 0;
     uint path_index = 0;
+    uint host_index = 0;
+    uint port_index = 0;
     for (uint i = 0; i < len; i++) {
         if (url[i] == '/') num_slashes++;
+        if (url[i] == ':') num_colons++; 
+        if (num_colons == 2 && port_index == 0) port_index = i;
+        if (num_slashes == 2 && url[i] == '/') host_index = i;
         if (num_slashes == 3) {
             path_index = i;
             break;
         }
     }
     if (num_slashes < 2) return INVALID_URL;
+    if (host_index == 0) return INVALID_URL;
     if (num_slashes == 2) {
-        memcpy(opts->host, url, len);
+        if (port_index == 0) {
+            memcpy(opts->host, url + host_index + 1, len - host_index - 1);
+        } else {
+            memcpy(opts->host, url + host_index + 1, port_index - host_index - 1);
+            memcpy(opts->port, url + port_index + 1, len - port_index - 1);
+        }
         memcpy(opts->path, "/", 1);
     } else {
-        memcpy(opts->host, url, path_index);
+        if (port_index == 0) {
+            memcpy(opts->host, url + host_index + 1, path_index - host_index - 1);
+        } else {
+            memcpy(opts->host, url + host_index + 1, port_index - host_index - 1);
+            memcpy(opts->port, url + port_index + 1, path_index - port_index - 1);
+        }
         memcpy(opts->path, url + path_index, len - path_index);
+    }
+    if (strncmp("https", url, 5) == 0) {
+        opts->is_tls = true;
     }
     return 0;
 }
@@ -152,7 +174,6 @@ int parse_options(int argv, char **argc, Options *opts) {
                     return INVALID_METHOD;
                 }
             }
-            printf("%s %s %i %s\n", argc[i], is_flag(argc[i]) ? "flag" : "value", f.flag, f.value);
         }
     }
     return 0;

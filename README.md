@@ -4,8 +4,8 @@ A very basic HTTP Client in C
 
 ## TODO
 
-* [ ] Options parsing
-* [ ] Basic GET request 
+* [x] Options parsing
+* [x] Basic GET request 
 * [ ] Verbose output (headers, req/response etc.)
 * [ ] Basic payload request (POST) 
 * [ ] Basic request for all Methods

@@ -1,25 +1,20 @@
 #include <stdio.h>
 #include "options.h"
+#include "request.h"
 
-#define BINARY_NAME ("call-u-later")
-#define HTTP_VERSION ("HTTP/1.1")
+#define BINARY_NAME "call-u-later"
 
 void print_usage() {
     printf("Usage:\n\n%s [OPTIONS] url\n\nOptions:\n\nTBD\n", BINARY_NAME);
 }
 
-char *create_http_payload(Options *opts) {
-    if (!opts) return "";
-    printf("Request:\n\n");
-    printf("%s %s %s\r\n", method_to_text(opts->method), opts->path, HTTP_VERSION);
-    printf("Host: %s\r\n", opts->host);
-    return "";
-}
-
-int make_request(Options *opts) {
-    printf("%s\n", create_http_payload(opts));
-    return 0;
-}
+// TODO: https: http://fm4dd.com/openssl/sslconnect.htm
+// TODO: use host for request
+// TODO: create request dynamically (with headers)
+// TODO dynamically allocate response, no matter the size
+// TODO format output
+// TODO POST with body in request
+// TODO implement HTTPS
 
 int main(int argv, char** argc) {
     if (argv <= 1) {

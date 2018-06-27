@@ -27,9 +27,11 @@ typedef struct Options {
     enum METHOD method;
     uint num_headers;
     Header **headers;
+    bool is_tls;
     char *host;
     char *path;
     char *body;
+    char *port;
 } Options;
 
 int parse_options(int argv, char **argc, Options *opts);
